@@ -266,14 +266,19 @@ class BurpExtender(IBurpExtender, ITab, IContextMenuFactory, IHttpListener, IMes
     # custom function which will be called when the thread is complete
     def onThreadComplete(self, q):
         response_details = q.get()
+        response_bytes = response_details["response"].getResponse() if response_details["response"] else None
 
-        response_info = self._helpers.analyzeResponse(response_details["response"].getResponse())
-        response_status = response_info.getStatusCode()
+        if response_bytes:
+            response_info = self._helpers.analyzeResponse(response_bytes)
+            status_str = str(response_info.getStatusCode())
+        else:
+            status_str = "no response (e.g. connection failed)"
 
-        # set lock before updating UI element - this is just a basic example, this technically wouldn't need a lock...
         self.lock.acquire()
-        self.textArea_example.append("[RESPONSE RECEIVED]\n" + response_details["url"] + ": " + str(response_status) + "\n\n")
-        self.lock.release()
+        try:
+            self.textArea_example.append("[RESPONSE RECEIVED]\n" + response_details["url"] + ": " + status_str + "\n\n")
+        finally:
+            self.lock.release()
 
     # -----------------------------------------------------------------------------
     # HTTP LISTENER INTERFACE
